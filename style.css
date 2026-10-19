@@ -189,13 +189,17 @@ body.admin .seat-cell:empty::before {
 .card {
   flex: 1; display: flex; flex-direction: column; justify-content: center;
   padding: 8px 10px 8px 14px; min-height: 74px;
-  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-s);
+  background: color-mix(in srgb, var(--g, var(--st-blank)) 9%, white);
+  border: 1px solid color-mix(in srgb, var(--g, var(--st-blank)) 30%, white);
+  border-radius: var(--radius-s);
   box-shadow: inset 5px 0 0 var(--g, var(--st-blank));
   user-select: none;
 }
 .card .name { font-size: 1.15rem; font-weight: 700; line-height: 1.3; }
-.card .meta { font-size: .78rem; color: var(--muted); display: flex; justify-content: space-between; gap: 6px; }
-.card .role { color: var(--g); font-weight: 500; }
+.card .name small { font-size: .75rem; font-weight: 400; color: var(--muted); margin-left: 6px; }
+.card .meta { font-size: .8rem; display: flex; justify-content: space-between; gap: 6px; }
+.card .grp { color: var(--g); font-weight: 700; }
+.card .role { color: var(--muted); }
 body.admin .seat-grid .card, body.admin .tray .card { cursor: grab; }
 .card.dragging { cursor: grabbing; }
 .sortable-ghost { opacity: .35; }
