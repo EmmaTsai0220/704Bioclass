@@ -147,8 +147,8 @@
     const s = student(name);
     const g = s && s.group;
     return '<div class="card" data-name="' + esc(name) + '" style="--g:' + (g ? groupColor(g) : 'var(--st-blank)') + '">' +
-      '<span class="name">' + esc(name) + '</span>' +
-      '<span class="meta"><span>' + (s ? s.no + ' 號' : '') + '</span>' +
+      '<span class="name">' + esc(name) + (s ? '<small>' + s.no + '</small>' : '') + '</span>' +
+      '<span class="meta"><span class="grp">' + esc(g || '未分組') + '</span>' +
       '<span class="role">' + esc(s && s.role ? s.role : '') + '</span></span></div>';
   }
 
