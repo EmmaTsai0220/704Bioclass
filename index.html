@@ -37,9 +37,10 @@
           <p id="hwCurrentDate" class="date"></p>
           <pre id="hwCurrent" class="hw-text"></pre>
           <form id="hwForm" class="admin-only hw-form">
-            <label for="hwInput">佈達新作業（原本的本次作業會變成上次作業）</label>
+            <label for="hwInput">佈達新作業</label>
             <textarea id="hwInput" rows="4" placeholder="1. 白講CH2-2&#10;2. 習作 CH2-2"></textarea>
-            <button class="btn primary" type="submit">佈達作業</button>
+            <label class="check"><input id="hwEdit" type="checkbox"> 只修改本次作業內容（不把它變成上次作業）</label>
+            <button id="hwSubmit" class="btn primary" type="submit">佈達作業</button>
           </form>
           <details class="prev">
             <summary>上次作業 <span id="hwPrevDate"></span></summary>
@@ -54,6 +55,23 @@
           <details class="log">
             <summary>最近加分紀錄</summary>
             <ul id="scoreLog" class="log-list"></ul>
+          </details>
+          <details class="log admin-only">
+            <summary>計分設定</summary>
+            <div class="settings">
+              <h3>修正總分</h3>
+              <p class="hint">直接改成指定分數，例如接續之前的分數。</p>
+              <div id="totalsForm" class="totals-form"></div>
+              <button id="saveTotalsBtn" class="btn ghost" type="button">儲存總分</button>
+
+              <h3>段考結算</h3>
+              <p class="hint">目前的總分會存進紀錄，各組歸零，開始新的計分週期。</p>
+              <div class="inline">
+                <input id="newTermName" type="text" placeholder="例如：第三次段考">
+                <button id="newTermBtn" class="btn ghost danger" type="button">結算並歸零</button>
+              </div>
+              <ul id="historyList" class="history"></ul>
+            </div>
           </details>
         </div>
       </div>
@@ -79,6 +97,7 @@
           <label class="check"><input id="drawNoRepeat" type="checkbox" checked> 抽過的先不重複</label>
           <button id="drawBtn" class="btn primary big" type="button">抽籤</button>
         </div>
+        <p class="pool-line"><span id="drawPool"></span> <button id="drawResetBtn" class="linkish" type="button">重置籤筒</button></p>
         <div id="drawResult" class="draw-result">
           <p class="empty">選好方式後按「抽籤」。</p>
         </div>
@@ -89,7 +108,7 @@
     <section id="tab-seats" class="panel" role="tabpanel" hidden>
       <div class="block">
         <div class="seat-toolbar admin-only">
-          <p class="hint">拖曳名字卡調整座位：拖到空位會直接移過去，拖到別人身上會互換。</p>
+          <p class="hint">拖曳名字卡調整座位：拖到空位會直接移過去，拖到別人身上會互換。點一下名字卡可以幫他加分。</p>
           <div class="seat-buttons">
             <button id="addRowBtn" class="btn ghost" type="button">加一列</button>
             <button id="delRowBtn" class="btn ghost" type="button">刪最後一列</button>
@@ -120,6 +139,16 @@
           <h2>作業訂正狀況</h2>
           <p id="submitMeta" class="date"></p>
         </div>
+        <div class="submit-tools admin-only">
+          <label class="field">分頁
+            <select id="hwTabSelect"></select>
+          </label>
+          <form id="addHwForm" class="inline">
+            <input id="newHwName" type="text" placeholder="新作業名稱，例如 CH2-1" required>
+            <button class="btn ghost" type="submit">新增作業欄</button>
+          </form>
+          <p class="hint">點表格裡的狀態會依序切換：OK → 未訂正 → 缺交 → 未登記，並立刻存回試算表。</p>
+        </div>
         <div class="legend">
           <span class="st st-ok">OK</span>
           <span class="st st-fix">未訂正</span>
@@ -134,7 +163,7 @@
     </section>
   </main>
 
-  <!-- 登入視窗 -->
+  <!-- 登入 -->
   <dialog id="loginDialog">
     <form id="loginForm" method="dialog">
       <h2>老師登入</h2>
@@ -148,7 +177,26 @@
     </form>
   </dialog>
 
-  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <!-- 加分 -->
+  <dialog id="pointDialog">
+    <form id="pointForm" method="dialog">
+      <h2 id="pointTitle"></h2>
+      <p id="pointSub" class="date"></p>
+      <div id="pointPresets" class="point-presets"></div>
+      <div class="inline custom-points">
+        <input id="pointCustom" type="number" step="1" placeholder="自訂分數">
+        <button id="pointCustomBtn" class="btn ghost" type="submit">加分</button>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="btn ghost" id="pointCancel">關閉</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite">
+    <span id="toastMsg"></span>
+    <button id="toastAction" type="button" hidden></button>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
   <script src="config.js"></script>
