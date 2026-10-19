@@ -22,90 +22,35 @@
   </header>
 
   <nav class="tabs" role="tablist" aria-label="功能">
-    <button role="tab" data-tab="home" aria-selected="true">作業與分數</button>
+    <button role="tab" data-tab="home" aria-selected="true">作業與座位</button>
+    <button role="tab" data-tab="points" aria-selected="false">加分</button>
     <button role="tab" data-tab="draw" aria-selected="false">籤筒</button>
-    <button role="tab" data-tab="seats" aria-selected="false">座位表</button>
     <button role="tab" data-tab="submit" aria-selected="false">訂正狀況</button>
   </nav>
 
   <main>
-    <!-- 作業與分數 -->
+    <!-- 作業與座位 -->
     <section id="tab-home" class="panel" role="tabpanel">
-      <div class="home-grid">
-        <div class="block homework">
-          <h2>本次作業</h2>
-          <p id="hwCurrentDate" class="date"></p>
-          <pre id="hwCurrent" class="hw-text"></pre>
-          <form id="hwForm" class="admin-only hw-form">
-            <label for="hwInput">佈達新作業</label>
-            <textarea id="hwInput" rows="4" placeholder="1. 白講CH2-2&#10;2. 習作 CH2-2"></textarea>
-            <label class="check"><input id="hwEdit" type="checkbox"> 只修改本次作業內容（不把它變成上次作業）</label>
-            <button id="hwSubmit" class="btn primary" type="submit">佈達作業</button>
-          </form>
-          <details class="prev">
-            <summary>上次作業 <span id="hwPrevDate"></span></summary>
-            <pre id="hwPrevious" class="hw-text small"></pre>
-          </details>
-        </div>
-
-        <div class="block scores">
-          <h2>各組總分</h2>
-          <p id="scoreSince" class="date"></p>
-          <ol id="scoreboard" class="scoreboard"></ol>
-          <details class="log">
-            <summary>最近加分紀錄</summary>
-            <ul id="scoreLog" class="log-list"></ul>
-          </details>
-          <details class="log admin-only">
-            <summary>計分設定</summary>
-            <div class="settings">
-              <h3>修正總分</h3>
-              <p class="hint">直接改成指定分數，例如接續之前的分數。</p>
-              <div id="totalsForm" class="totals-form"></div>
-              <button id="saveTotalsBtn" class="btn ghost" type="button">儲存總分</button>
-
-              <h3>段考結算</h3>
-              <p class="hint">目前的總分會存進紀錄，各組歸零，開始新的計分週期。</p>
-              <div class="inline">
-                <input id="newTermName" type="text" placeholder="例如：第三次段考">
-                <button id="newTermBtn" class="btn ghost danger" type="button">結算並歸零</button>
-              </div>
-              <ul id="historyList" class="history"></ul>
-            </div>
-          </details>
-        </div>
-      </div>
-    </section>
-
-    <!-- 籤筒 -->
-    <section id="tab-draw" class="panel" role="tabpanel" hidden>
-      <div class="block">
-        <div class="draw-controls">
-          <div class="seg" role="radiogroup" aria-label="抽籤方式">
-            <label><input type="radio" name="drawMode" value="people" checked><span>抽人</span></label>
-            <label><input type="radio" name="drawMode" value="group"><span>抽組別</span></label>
-            <label><input type="radio" name="drawMode" value="role"><span>抽角色</span></label>
+      <div class="block homework">
+        <div class="hw-cols">
+          <div>
+            <h2>本次作業</h2>
+            <p id="hwCurrentDate" class="date"></p>
+            <pre id="hwCurrent" class="hw-text"></pre>
           </div>
-          <label class="field" data-for="people">人數
-            <input id="drawCount" type="number" min="1" max="23" value="1">
-          </label>
-          <label class="field" data-for="role" hidden>角色
-            <select id="drawRole">
-              <option>教授</option><option>研究員</option><option>文書</option><option>總務</option>
-            </select>
-          </label>
-          <label class="check"><input id="drawNoRepeat" type="checkbox" checked> 抽過的先不重複</label>
-          <button id="drawBtn" class="btn primary big" type="button">抽籤</button>
+          <div class="hw-prev">
+            <h3>上次作業 <span id="hwPrevDate" class="date-inline"></span></h3>
+            <pre id="hwPrevious" class="hw-text small"></pre>
+          </div>
         </div>
-        <p class="pool-line"><span id="drawPool"></span> <button id="drawResetBtn" class="linkish" type="button">重置籤筒</button></p>
-        <div id="drawResult" class="draw-result">
-          <p class="empty">選好方式後按「抽籤」。</p>
-        </div>
+        <form id="hwForm" class="admin-only hw-form">
+          <label for="hwInput">佈達新作業</label>
+          <textarea id="hwInput" rows="3" placeholder="1. 白講CH2-2&#10;2. 習作 CH2-2"></textarea>
+          <label class="check"><input id="hwEdit" type="checkbox"> 只修改本次作業內容（不把它變成上次作業）</label>
+          <button id="hwSubmit" class="btn primary" type="submit">佈達作業</button>
+        </form>
       </div>
-    </section>
 
-    <!-- 座位表 -->
-    <section id="tab-seats" class="panel" role="tabpanel" hidden>
       <div class="block">
         <div class="seat-toolbar admin-only">
           <p class="hint">拖曳名字卡調整座位：拖到空位會直接移過去，拖到別人身上會互換。點一下名字卡可以幫他加分。</p>
@@ -129,6 +74,88 @@
       <div class="block">
         <h2>分組名單</h2>
         <div id="groupList" class="group-list"></div>
+      </div>
+    </section>
+
+    <!-- 加分 -->
+    <section id="tab-points" class="panel" role="tabpanel" hidden>
+      <div class="block">
+        <div class="points-head">
+          <div>
+            <h2>各組總分</h2>
+            <p id="scoreSince" class="date"></p>
+          </div>
+          <label class="field admin-only check-label">這次檢查的作業
+            <input id="checkLabel" type="text">
+          </label>
+        </div>
+        <p id="checkRule" class="hint admin-only"></p>
+        <div id="groupCards" class="group-cards"></div>
+      </div>
+
+      <div class="points-grid">
+        <div class="block admin-only">
+          <h2>作業未完成統計</h2>
+          <p id="missStatsHint" class="date"></p>
+          <ol id="missStats" class="miss-stats"></ol>
+        </div>
+        <div class="block">
+          <h2>最近加分紀錄</h2>
+          <ul id="scoreLog" class="log-list"></ul>
+        </div>
+      </div>
+
+      <div class="block">
+        <h2>各組作業紀錄</h2>
+        <p class="date">本段考每次檢查作業的結果</p>
+        <div class="table-wrap">
+          <table id="checkMatrix" class="check-matrix"></table>
+        </div>
+      </div>
+
+      <details class="block admin-only">
+        <summary><h2 class="inline-h">計分設定</h2></summary>
+        <div class="settings">
+          <h3>修正總分</h3>
+          <p class="hint">直接改成指定分數，例如接續之前的分數。</p>
+          <div id="totalsForm" class="totals-form"></div>
+          <button id="saveTotalsBtn" class="btn ghost" type="button">儲存總分</button>
+
+          <h3>段考結算</h3>
+          <p class="hint">目前的總分會存進紀錄，各組歸零，作業未完成次數也會重新計算。</p>
+          <div class="inline">
+            <input id="newTermName" type="text" placeholder="例如：第三次段考">
+            <button id="newTermBtn" class="btn ghost danger" type="button">結算並歸零</button>
+          </div>
+          <ul id="historyList" class="history"></ul>
+        </div>
+      </details>
+    </section>
+
+    <!-- 籤筒 -->
+    <section id="tab-draw" class="panel" role="tabpanel" hidden>
+      <div class="block">
+        <div class="draw-controls">
+          <div class="seg" role="radiogroup" aria-label="抽籤方式">
+            <label><input type="radio" name="drawMode" value="people" checked><span>抽人</span></label>
+            <label><input type="radio" name="drawMode" value="group"><span>抽組別</span></label>
+            <label><input type="radio" name="drawMode" value="role"><span>抽角色</span></label>
+          </div>
+          <label class="field" data-for="role" hidden>角色
+            <select id="drawRole">
+              <option>教授</option><option>研究員</option><option>文書</option><option>總務</option>
+            </select>
+          </label>
+          <label class="field" data-for="people role">人數
+            <input id="drawCount" type="number" min="1" max="23" value="1">
+          </label>
+          <label class="check"><input id="drawNoRepeat" type="checkbox" checked> 抽過的先不重複</label>
+          <button id="drawBtn" class="btn primary big" type="button">抽籤</button>
+        </div>
+        <p class="pool-line"><span id="drawPool"></span> <button id="drawResetBtn" class="linkish" type="button">重置籤筒</button></p>
+        <div id="drawResult" class="draw-result">
+          <p class="empty">選好方式後按「抽籤」。</p>
+        </div>
       </div>
     </section>
 
@@ -184,11 +211,29 @@
       <p id="pointSub" class="date"></p>
       <div id="pointPresets" class="point-presets"></div>
       <div class="inline custom-points">
-        <input id="pointCustom" type="number" step="1" placeholder="自訂分數">
+        <input id="pointCustom" type="number" step="1" placeholder="自訂分數（扣分請打負數）">
         <button id="pointCustomBtn" class="btn ghost" type="submit">加分</button>
       </div>
       <div class="dialog-actions">
         <button type="button" class="btn ghost" id="pointCancel">關閉</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 作業未完成 -->
+  <dialog id="missDialog">
+    <form id="missForm" method="dialog">
+      <h2 id="missTitle"></h2>
+      <p id="missSub" class="date"></p>
+      <label for="missInput">未完成的座號（可以輸入多個，用空格或逗號隔開）</label>
+      <input id="missInput" type="text" inputmode="numeric" placeholder="例如：4 17" autocomplete="off">
+      <p class="hint">或直接點下面的組員：</p>
+      <div id="missChips" class="miss-chips"></div>
+      <p id="missPreview" class="miss-preview"></p>
+      <p id="missError" class="error" hidden></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn ghost" id="missCancel">取消</button>
+        <button type="submit" class="btn primary" id="missSubmit">登記</button>
       </div>
     </form>
   </dialog>
