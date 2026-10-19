@@ -7,7 +7,7 @@
 
   const CFG = window.APP_CONFIG || {};
   const DEMO = !CFG.GAS_URL;
-  const PRESETS = CFG.POINT_PRESETS || [5, 10, 20];
+  const PRESETS = CFG.POINT_PRESETS || [5, 10, 20, 30];
   const PW_KEY = 'bio704_pw';
   const DRAWN_KEY = 'bio704_drawn';
   const CYCLE = ['OK', '未訂正', '缺交', ''];
@@ -150,34 +150,63 @@
     renderScores();
   }
 
+  function rule() { return state.data.hwCheckRule || { full: 30, perMissing: 20, alert: 3 }; }
+  function checkScore(n) { return rule().full - rule().perMissing * n; }
+  function checks() { const c = state.data.hwChecks; return c && !c.error ? c : { records: [], counts: {} }; }
+  function currentLabel() { return $('#checkLabel').value.trim() || defaultLabel(); }
+  function defaultLabel() { const d = new Date(); return (d.getMonth() + 1) + '/' + d.getDate() + ' 作業'; }
+
   function renderScores() {
     const sc = state.data.scores;
     const totals = state.data.groups.map((g) => sc.totals[g.name] || 0);
     const max = Math.max(1, ...totals);
     const top = Math.max(...totals);
     const w = state.data.weights;
+    const r = rule();
     $('#scoreSince').textContent = '加分會乘上角色權重：教授 ×' + w['教授'] + '、研究員 ×' + w['研究員'] +
       '、文書 ×' + w['文書'] + '、總務 ×' + w['總務'];
-    $('#scoreboard').innerHTML = state.data.groups.map((g, i) => {
+    $('#checkRule').textContent = '作業全數完成 +' + r.full + '；每一人未完成少 ' + r.perMissing +
+      ' 分（1 人 = ' + signed(checkScore(1)) + '、2 人 = ' + signed(checkScore(2)) + '、3 人 = ' + signed(checkScore(3)) + '）';
+
+    const label = currentLabel();
+    const recs = checks().records;
+    $('#groupCards').innerHTML = state.data.groups.map((g, i) => {
       const total = totals[i];
       const count = Object.values(g.members).filter(Boolean).length;
       const lead = top > 0 && total === top;
-      return '<li class="score-row' + (lead ? ' lead' : '') + '" style="--g:' + groupColor(g.name) + '">' +
-        '<div class="score-name">' + esc(g.name) + '<small>' + count + ' 人</small></div>' +
+      const done = recs.filter((x) => !x.undone && x.group === g.name && x.label === label);
+      const last = done[done.length - 1];
+      const status = last
+        ? '「' + esc(label) + '」<b>' + (last.missing.length ? last.missing.join('、') + ' 號未完成' : '全數完成') +
+          ' ' + signed(last.delta) + '</b> <button type="button" class="linkish undo-check" data-id="' + esc(last.id) + '">撤銷</button>'
+        : '';
+      return '<div class="gcard' + (lead ? ' lead' : '') + '" style="--g:' + groupColor(g.name) + '">' +
+        '<div class="gcard-head"><h3>' + esc(g.name) + '<small>' + count + ' 人</small></h3>' +
+        '<span class="gtotal">' + fmt(total) + '</span></div>' +
         '<div class="score-track"><div class="score-bar" style="width:' + Math.max(0, total / max * 100) + '%"></div></div>' +
-        '<div class="score-total">' + fmt(total) + '</div>' +
-        '<button type="button" class="pt-btn score-add" data-group="' + esc(g.name) + '">加分</button></li>';
+        '<p class="gstatus admin-text">' + (state.admin ? status : '') + '</p>' +
+        '<div class="gactions">' +
+          '<button type="button" class="pt-btn act-full" data-group="' + esc(g.name) + '">作業全數完成 +' + r.full + '</button>' +
+          '<button type="button" class="pt-btn act-miss" data-group="' + esc(g.name) + '">作業未完成</button>' +
+          '<button type="button" class="pt-btn act-pts" data-group="' + esc(g.name) + '">其他加分</button>' +
+        '</div></div>';
     }).join('');
 
-    const log = (sc.log || []).slice(0, 15);
+    // 最近加分紀錄
+    const hwIds = new Set(recs.map((x) => x.id));
+    const log = (sc.log || []).slice(0, 20);
     $('#scoreLog').innerHTML = log.length ? log.map((x) =>
       '<li class="' + (x.undone ? 'undone' : '') + '"><span>' + esc(x.time) + '</span>' +
       '<span><b>' + esc(x.group) + '</b> ' + esc(x.student || '') +
       (x.role && x.role !== '全組' ? '（' + esc(x.role) + ' ×' + x.weight + '）' : '') +
-      ' <b>' + signed(x.delta) + '</b> ' + esc(x.reason || '') + '</span>' +
-      (state.admin && !x.undone ? '<button type="button" class="linkish undo" data-id="' + esc(x.id) + '">撤銷</button>' : '') +
+      ' <b>' + signed(x.delta) + '</b> ' + esc(state.admin || !hwIds.has(x.id) ? (x.reason || '') : (x.reason || '').split('：')[0]) + '</span>' +
+      (state.admin && !x.undone ? '<button type="button" class="linkish undo" data-id="' + esc(x.id) + '"' +
+        (hwIds.has(x.id) ? ' data-hw="1"' : '') + '>撤銷</button>' : '') +
       '</li>'
     ).join('') : '<li>這個段考還沒有加分紀錄</li>';
+
+    renderMissStats();
+    renderCheckMatrix();
 
     // 計分設定
     $('#totalsForm').innerHTML = state.data.groups.map((g) =>
@@ -189,6 +218,121 @@
       '<li><b>' + esc(h.term) + '</b>（' + esc(h.from) + '～' + esc(h.to) + '）：' +
       Object.keys(h.totals).map((k) => esc(k) + ' ' + fmt(h.totals[k])).join('、') + '</li>'
     ).join('');
+  }
+
+  // 每位同學本段考累計幾次沒寫
+  function renderMissStats() {
+    const c = checks();
+    const alert = rule().alert;
+    $('#missStatsHint').textContent = (c.error ? '讀不到紀錄：' + c.error : '本段考累計，達 ' + alert + ' 次會標紅');
+    const labelsOf = {};
+    c.records.filter((x) => !x.undone).forEach((x) => x.missing.forEach((no) => {
+      (labelsOf[no] = labelsOf[no] || []).push(x.label);
+    }));
+    const rows = Object.keys(c.counts).map(Number)
+      .map((no) => ({ no: no, n: c.counts[no], s: state.data.students.find((x) => x.no === no) }))
+      .sort((a, b) => b.n - a.n || a.no - b.no);
+    $('#missStats').innerHTML = rows.length ? rows.map((r) =>
+      '<li class="' + (r.n >= alert ? 'alert' : '') + '"><span class="no">' + r.no + '</span>' +
+      '<span class="name">' + esc(r.s ? r.s.name : '') + '</span>' +
+      '<span class="labels" title="' + esc((labelsOf[r.no] || []).join('、')) + '">' + esc((labelsOf[r.no] || []).join('、')) + '</span>' +
+      '<span class="cnt">' + r.n + ' 次</span></li>'
+    ).join('') : '<li class="empty"><span class="empty">目前大家都有完成作業</span></li>';
+  }
+
+  // 各組每次作業檢查的結果表
+  function renderCheckMatrix() {
+    const recs = checks().records.filter((x) => !x.undone);
+    const labels = [];
+    recs.forEach((x) => { if (labels.indexOf(x.label) < 0) labels.push(x.label); });
+    const groups = state.data.groups;
+    if (!labels.length) {
+      $('#checkMatrix').innerHTML = '<tbody><tr><td class="none">還沒有作業檢查紀錄</td></tr></tbody>';
+      return;
+    }
+    const head = '<thead><tr><th scope="col">作業</th>' + groups.map((g) =>
+      '<th scope="col" style="--g:' + groupColor(g.name) + '">' + esc(g.name) + '</th>').join('') + '</tr></thead>';
+    const body = '<tbody>' + labels.slice().reverse().map((lb) =>
+      '<tr><th scope="row">' + esc(lb) + '</th>' + groups.map((g) => {
+        const list = recs.filter((x) => x.label === lb && x.group === g.name);
+        const x = list[list.length - 1];
+        if (!x) return '<td class="none">—</td>';
+        if (!x.missing.length) return '<td class="full">全數完成<small>' + signed(x.delta) + '</small></td>';
+        const who = state.admin ? x.missing.join('、') + ' 號' : x.missing.length + ' 人未完成';
+        return '<td class="part">' + esc(who) + '<small>' + signed(x.delta) + '</small></td>';
+      }).join('') + '</tr>'
+    ).join('') + '</tbody>';
+    $('#checkMatrix').innerHTML = head + body;
+  }
+
+  /* ================= 作業檢查 ================= */
+  async function recordCheck(groupName, missing) {
+    const label = currentLabel();
+    const dup = checks().records.some((x) => !x.undone && x.group === groupName && x.label === label);
+    if (dup && !confirm(groupName + '的「' + label + '」已經登記過了，還要再登記一次嗎？\n（如果要改，建議先按「撤銷」再重新登記）')) return;
+    $$('#groupCards .pt-btn').forEach((b) => { b.disabled = true; });
+    try {
+      const res = await api('recordHomeworkCheck', { group: groupName, label: label, missing: missing }, true);
+      state.data.scores = res.scores;
+      state.data.hwChecks = res.hwChecks;
+      renderScores();
+      const c = res.check;
+      toast(c.group + '「' + c.label + '」' + (c.missing.length ? c.missing.join('、') + ' 號未完成' : '全數完成') + ' ' + signed(c.delta),
+        false, { label: '撤銷', run: () => undoCheck(c.id) });
+    } catch (e) {
+      toast('登記失敗：' + e.message, true);
+      renderScores();
+    }
+  }
+
+  async function undoCheck(id) {
+    try {
+      const res = await api('undoHomeworkCheck', { id: id }, true);
+      state.data.scores = res.scores;
+      state.data.hwChecks = res.hwChecks;
+      renderScores();
+      toast('已撤銷這筆作業紀錄');
+    } catch (e) { toast('撤銷失敗：' + e.message, true); }
+  }
+
+  let missGroup = null;
+  function openMissDialog(groupName) {
+    missGroup = groupName;
+    const dlg = $('#missDialog');
+    dlg.style.setProperty('--g', groupColor(groupName));
+    $('#missTitle').textContent = groupName + '：作業未完成';
+    $('#missSub').textContent = '登記的作業：「' + currentLabel() + '」';
+    $('#missInput').value = '';
+    $('#missError').hidden = true;
+    const members = state.data.students.filter((s) => s.group === groupName);
+    $('#missChips').innerHTML = members.map((s) =>
+      '<button type="button" class="miss-chip" aria-pressed="false" data-no="' + s.no + '"><span class="no">' + s.no + '</span>' + esc(s.name) + '</button>'
+    ).join('');
+    updateMissPreview();
+    dlg.showModal();
+    $('#missInput').focus();
+  }
+
+  function parseMissing() {
+    const nos = ($('#missInput').value.match(/\d+/g) || []).map(Number);
+    return nos.filter((n, i) => nos.indexOf(n) === i);
+  }
+
+  function updateMissPreview() {
+    const nos = parseMissing();
+    const members = state.data.students.filter((s) => s.group === missGroup);
+    const bad = nos.filter((n) => !members.some((s) => s.no === n));
+    $$('#missChips .miss-chip').forEach((b) => b.setAttribute('aria-pressed', String(nos.indexOf(Number(b.dataset.no)) >= 0)));
+    const err = $('#missError');
+    if (bad.length) {
+      err.textContent = bad.join('、') + ' 號不是' + missGroup + '的組員';
+      err.hidden = false;
+    } else err.hidden = true;
+    const ok = nos.filter((n) => bad.indexOf(n) < 0);
+    $('#missPreview').innerHTML = ok.length
+      ? ok.length + ' 人未完成：' + rule().full + ' − ' + rule().perMissing + ' × ' + ok.length + ' = <b>' + signed(checkScore(ok.length)) + '</b> 分'
+      : '還沒輸入座號（沒有人未完成的話，請改按「作業全數完成」）';
+    $('#missSubmit').disabled = !ok.length || bad.length > 0;
   }
 
   /**
@@ -281,6 +425,7 @@
       const res = await api('newTerm', { term: name }, true);
       state.data.scores = res.scores;
       state.data.history = res.history;
+      state.data.hwChecks = { term: res.scores.term, records: [], counts: {} };
       $('#newTermName').value = '';
       renderHeader();
       renderScores();
@@ -305,7 +450,7 @@
     $('#pointSub').textContent = s
       ? group + '，' + role + '：分數 ×' + w + ' 加到全組'
       : '全組加分（×1）';
-    const values = PRESETS.concat(PRESETS.slice(0, 3).map((v) => -v));
+    const values = PRESETS.concat(PRESETS.map((v) => -v));
     $('#pointPresets').innerHTML = values.map((v) =>
       '<button type="button" class="pt-btn' + (v < 0 ? ' neg' : '') + '" data-base="' + v + '">' + signed(v) +
       (w !== 1 ? '<small>實得 ' + signed(round1(v * w)) + '</small>' : '') + '</button>'
@@ -333,7 +478,7 @@
   }
   function syncDrawFields() {
     const mode = $('input[name="drawMode"]:checked').value;
-    $$('.draw-controls .field').forEach((f) => { f.hidden = f.dataset.for !== mode; });
+    $$('.draw-controls .field').forEach((f) => { f.hidden = f.dataset.for.split(' ').indexOf(mode) < 0; });
     renderDrawPool();
   }
   function drawablePeople() { return state.data.students.filter((s) => s.group); }
@@ -348,9 +493,11 @@
       const left = state.data.groups.length - state.drawn.group.length;
       text = '還有 ' + left + ' 組沒抽過';
     } else {
-      const all = drawablePeople().length;
-      const left = drawablePeople().filter((s) => state.drawn.people.indexOf(s.name) < 0).length;
-      text = '還有 ' + left + ' / ' + all + ' 人沒抽過';
+      const list = mode === 'role'
+        ? drawablePeople().filter((s) => s.role === $('#drawRole').value)
+        : drawablePeople();
+      const left = list.filter((s) => state.drawn.people.indexOf(s.name) < 0).length;
+      text = (mode === 'role' ? $('#drawRole').value + '：' : '') + '還有 ' + left + ' / ' + list.length + ' 人沒抽過';
     }
     $('#drawPool').textContent = text;
   }
@@ -396,18 +543,17 @@
       if (r.newRound) toast('每組都抽過了，重新開始新一輪');
       result = { mode: 'group', items: r.picked.map((g) => ({ group: g.name, role: '全組', got: 0 })) };
     } else {
-      // 抽角色：每組抽出一位該角色（文書有兩位的組別隨機抽一位）
+      // 抽角色：從全班這個角色的同學中抽指定人數
       const role = $('#drawRole').value;
-      const items = [];
-      state.data.groups.forEach((g) => {
-        const cands = drawablePeople().filter((s) => s.group === g.name && s.role === role);
-        if (!cands.length) return;
-        const fresh = cands.filter((s) => state.drawn.people.indexOf(s.name) < 0);
-        const s = shuffle(noRepeat && fresh.length ? fresh : cands)[0];
-        if (noRepeat && state.drawn.people.indexOf(s.name) < 0) state.drawn.people.push(s.name);
-        items.push({ student: s.name, group: s.group, role: s.role, got: 0 });
-      });
-      result = { mode: 'role', role: role, items: items };
+      const cands = drawablePeople().filter((x) => x.role === role);
+      const n = Math.max(1, Math.min(cands.length, parseInt($('#drawCount').value, 10) || 1));
+      const r = pick(cands, n, state.drawn.people, (x) => x.name);
+      if (r.newRound) {
+        state.drawn.people = state.drawn.people.filter((nm) => !cands.some((c) => c.name === nm));
+        toast('這個角色都抽過一輪了，重新開始');
+      }
+      if (noRepeat) r.picked.forEach((x) => { if (state.drawn.people.indexOf(x.name) < 0) state.drawn.people.push(x.name); });
+      result = { mode: 'role', role: role, items: r.picked.map((x) => ({ student: x.name, group: x.group, role: x.role, got: 0 })) };
     }
     saveDrawn();
     renderDrawPool();
@@ -418,7 +564,7 @@
   function revealDraw(result) {
     state.drawResult = result;
     const btn = $('#drawBtn');
-    if (reduceMotion || result.mode === 'role') { renderDrawResult(); return; }
+    if (reduceMotion) { renderDrawResult(); return; }
     btn.disabled = true;
     const names = result.mode === 'group'
       ? state.data.groups.map((g) => g.name)
@@ -439,7 +585,6 @@
   function ptButtons(i) {
     return '<div class="pts">' +
       PRESETS.map((v) => '<button type="button" class="pt-btn" data-i="' + i + '" data-base="' + v + '">' + signed(v) + '</button>').join('') +
-      '<button type="button" class="pt-btn neg" data-i="' + i + '" data-base="' + (-PRESETS[0]) + '">' + signed(-PRESETS[0]) + '</button>' +
       '</div>';
   }
 
@@ -475,9 +620,9 @@
         '</div>';
     }).join('');
 
-    if (r.mode === 'role' && r.items.length > 1) {
+    if (r.items.length > 1) {
       box.className = 'draw-result batch';
-      box.innerHTML = '<div class="draw-batch"><span>每組的' + esc(r.role) + '一起加分：</span>' +
+      box.innerHTML = '<div class="draw-batch"><span>抽到的 ' + r.items.length + ' 位一起加分：</span>' +
         PRESETS.map((v) => '<button type="button" class="pt-btn" data-all="' + v + '">全部 ' + signed(v) + '</button>').join('') +
         '</div><div class="draw-cards">' + cards + '</div>';
     } else {
@@ -858,14 +1003,43 @@
 
     // 作業與分數
     $('#hwForm').addEventListener('submit', publishHomework);
-    $('#scoreboard').addEventListener('click', (e) => {
-      const b = e.target.closest('.score-add');
-      if (b) openPointDialog({ group: b.dataset.group });
+    $('#groupCards').addEventListener('click', (e) => {
+      const b = e.target.closest('button');
+      if (!b || !state.admin) return;
+      const g = b.dataset.group;
+      if (b.classList.contains('act-full')) recordCheck(g, []);
+      else if (b.classList.contains('act-miss')) openMissDialog(g);
+      else if (b.classList.contains('act-pts')) openPointDialog({ group: g });
+      else if (b.classList.contains('undo-check') && confirm('確定撤銷這筆作業紀錄嗎？分數也會一起扣回來。')) undoCheck(b.dataset.id);
     });
     $('#scoreLog').addEventListener('click', (e) => {
       const b = e.target.closest('.undo');
-      if (b && confirm('確定撤銷這筆加分嗎？')) undoPoints([b.dataset.id]);
+      if (!b || !confirm('確定撤銷這筆加分嗎？')) return;
+      if (b.dataset.hw) undoCheck(b.dataset.id);
+      else undoPoints([b.dataset.id]);
     });
+    $('#checkLabel').value = defaultLabel();
+    $('#checkLabel').addEventListener('input', () => { if (state.data) renderScores(); });
+
+    // 作業未完成視窗
+    $('#missInput').addEventListener('input', updateMissPreview);
+    $('#missChips').addEventListener('click', (e) => {
+      const b = e.target.closest('.miss-chip');
+      if (!b) return;
+      const nos = parseMissing();
+      const no = Number(b.dataset.no);
+      const next = nos.indexOf(no) >= 0 ? nos.filter((n) => n !== no) : nos.concat(no);
+      $('#missInput').value = next.sort((a, c) => a - c).join(' ');
+      updateMissPreview();
+    });
+    $('#missForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const nos = parseMissing();
+      if (!nos.length || !$('#missError').hidden) return;
+      $('#missDialog').close();
+      recordCheck(missGroup, nos);
+    });
+    $('#missCancel').addEventListener('click', () => $('#missDialog').close());
     $('#saveTotalsBtn').addEventListener('click', saveTotals);
     $('#newTermBtn').addEventListener('click', newTerm);
 
@@ -885,6 +1059,7 @@
     // 籤筒
     $$('input[name="drawMode"]').forEach((r) => r.addEventListener('change', syncDrawFields));
     $('#drawNoRepeat').addEventListener('change', renderDrawPool);
+    $('#drawRole').addEventListener('change', renderDrawPool);
     $('#drawBtn').addEventListener('click', doDraw);
     $('#drawResetBtn').addEventListener('click', resetDrawn);
     $('#drawResult').addEventListener('click', (e) => {
@@ -957,6 +1132,8 @@
       ],
       scores: { term: '第二次段考', startedAt: '10/19', totals: { 美秀組: 0, 虎克組: 0, 林奈組: 0, 達爾文組: 0, 孟德爾組: 0 }, log: [] },
       history: [],
+      hwCheckRule: { full: 30, perMissing: 20, alert: 3 },
+      hwChecks: { term: '第二次段考', records: [], counts: {} },
       homework: {
         current: { date: '10/8', text: '1. 白講CH2-1\n2. 習作 CH2-1\n3. 小藍CH2-1\n4. 訂正CH2-1' },
         previous: { date: '10/5', text: '1. 白講CH1-4\n2. 習作 CH1-4\n3. 小藍CH1-4\n4. 訂正CH1-3' },
@@ -1007,7 +1184,7 @@
           case 'newTerm': {
             db.history.push({ term: db.scores.term, from: db.scores.startedAt, to: now().split(' ')[0], totals: clone(db.scores.totals) });
             Object.keys(db.scores.totals).forEach((k) => { db.scores.totals[k] = 0; });
-            db.scores.term = p.term; db.scores.log = [];
+            db.scores.term = p.term; db.scores.log = []; db.hwChecks = { term: p.term, records: [], counts: {} };
             return resolve({ scores: clone(db.scores), history: clone(db.history) });
           }
           case 'setHomework': {
@@ -1024,6 +1201,26 @@
             db.submissions.records.forEach((r) => { r.status[p.name] = ''; });
             return resolve(clone(db.submissions));
           case 'setHwTab': throw new Error('示範模式不能切換分頁');
+          case 'recordHomeworkCheck': {
+            const delta = 30 - 20 * p.missing.length;
+            const id = Math.random().toString(16).slice(2, 10);
+            const rec = { id: id, date: now().split(' ')[0], label: p.label, group: p.group, missing: p.missing.slice().sort((a, b) => a - b), delta: delta, undone: false };
+            db.hwChecks.records.push(rec);
+            rec.missing.forEach((no) => { db.hwChecks.counts[no] = (db.hwChecks.counts[no] || 0) + 1; });
+            db.scores.totals[p.group] = round1((db.scores.totals[p.group] || 0) + delta);
+            db.scores.log.unshift({ id: id, time: now(), group: p.group, student: '', role: '全組', base: delta, weight: 1, delta: delta,
+              reason: p.label + '：' + (rec.missing.length ? rec.missing.join('、') + ' 號未完成' : '全數完成'), undone: false });
+            return resolve({ check: rec, scores: clone(db.scores), hwChecks: clone(db.hwChecks) });
+          }
+          case 'undoHomeworkCheck': {
+            const rec = db.hwChecks.records.find((x) => x.id === p.id);
+            if (!rec || rec.undone) throw new Error('找不到這筆紀錄或已撤銷');
+            rec.undone = true;
+            rec.missing.forEach((no) => { db.hwChecks.counts[no]--; if (!db.hwChecks.counts[no]) delete db.hwChecks.counts[no]; });
+            db.scores.totals[rec.group] = round1(db.scores.totals[rec.group] - rec.delta);
+            const l = db.scores.log.find((x) => x.id === p.id); if (l) l.undone = true;
+            return resolve({ undone: p.id, scores: clone(db.scores), hwChecks: clone(db.hwChecks) });
+          }
           default: throw new Error('示範模式不支援：' + action);
         }
       } catch (e) { reject(e); }
@@ -1035,7 +1232,7 @@
     bindEvents();
     syncDrawFields();
     const fromHash = location.hash.replace('#', '');
-    showTab(['home', 'draw', 'seats', 'submit'].indexOf(fromHash) >= 0 ? fromHash : 'home');
+    showTab(['home', 'points', 'draw', 'submit'].indexOf(fromHash) >= 0 ? fromHash : 'home');
     await load(false);
     let saved = '';
     try { saved = sessionStorage.getItem(PW_KEY) || ''; } catch (e) { /* ignore */ }
