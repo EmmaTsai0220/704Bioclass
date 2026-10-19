@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>704 生物課</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <h1 id="className">704 生物課</h1>
+      <p id="termLabel" class="term">載入中…</p>
+    </div>
+    <div class="top-actions">
+      <button id="refreshBtn" class="btn ghost" type="button" title="重新讀取最新資料">重新整理</button>
+      <button id="modeBtn" class="btn mode" type="button">老師登入</button>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="功能">
+    <button role="tab" data-tab="home" aria-selected="true">作業與分數</button>
+    <button role="tab" data-tab="draw" aria-selected="false">籤筒</button>
+    <button role="tab" data-tab="seats" aria-selected="false">座位表</button>
+    <button role="tab" data-tab="submit" aria-selected="false">訂正狀況</button>
+  </nav>
+
+  <main>
+    <!-- 作業與分數 -->
+    <section id="tab-home" class="panel" role="tabpanel">
+      <div class="home-grid">
+        <div class="block homework">
+          <h2>本次作業</h2>
+          <p id="hwCurrentDate" class="date"></p>
+          <pre id="hwCurrent" class="hw-text"></pre>
+          <form id="hwForm" class="admin-only hw-form">
+            <label for="hwInput">佈達新作業（原本的本次作業會變成上次作業）</label>
+            <textarea id="hwInput" rows="4" placeholder="1. 白講CH2-2&#10;2. 習作 CH2-2"></textarea>
+            <button class="btn primary" type="submit">佈達作業</button>
+          </form>
+          <details class="prev">
+            <summary>上次作業 <span id="hwPrevDate"></span></summary>
+            <pre id="hwPrevious" class="hw-text small"></pre>
+          </details>
+        </div>
+
+        <div class="block scores">
+          <h2>各組總分</h2>
+          <p id="scoreSince" class="date"></p>
+          <ol id="scoreboard" class="scoreboard"></ol>
+          <details class="log">
+            <summary>最近加分紀錄</summary>
+            <ul id="scoreLog" class="log-list"></ul>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- 籤筒 -->
+    <section id="tab-draw" class="panel" role="tabpanel" hidden>
+      <div class="block">
+        <div class="draw-controls">
+          <div class="seg" role="radiogroup" aria-label="抽籤方式">
+            <label><input type="radio" name="drawMode" value="people" checked><span>抽人</span></label>
+            <label><input type="radio" name="drawMode" value="group"><span>抽組別</span></label>
+            <label><input type="radio" name="drawMode" value="role"><span>抽角色</span></label>
+          </div>
+          <label class="field" data-for="people">人數
+            <input id="drawCount" type="number" min="1" max="23" value="1">
+          </label>
+          <label class="field" data-for="role" hidden>角色
+            <select id="drawRole">
+              <option>教授</option><option>研究員</option><option>文書</option><option>總務</option>
+            </select>
+          </label>
+          <label class="check"><input id="drawNoRepeat" type="checkbox" checked> 抽過的先不重複</label>
+          <button id="drawBtn" class="btn primary big" type="button">抽籤</button>
+        </div>
+        <div id="drawResult" class="draw-result">
+          <p class="empty">選好方式後按「抽籤」。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 座位表 -->
+    <section id="tab-seats" class="panel" role="tabpanel" hidden>
+      <div class="block">
+        <div class="seat-toolbar admin-only">
+          <p class="hint">拖曳名字卡調整座位：拖到空位會直接移過去，拖到別人身上會互換。</p>
+          <div class="seat-buttons">
+            <button id="addRowBtn" class="btn ghost" type="button">加一列</button>
+            <button id="delRowBtn" class="btn ghost" type="button">刪最後一列</button>
+            <button id="undoSeatBtn" class="btn ghost" type="button" disabled>復原</button>
+            <button id="saveSeatBtn" class="btn primary" type="button" disabled>儲存座位</button>
+          </div>
+        </div>
+        <div class="classroom">
+          <div class="blackboard">黑板</div>
+          <div id="seatGrid" class="seat-grid"></div>
+        </div>
+        <div class="admin-only tray-wrap">
+          <h3>還沒排座位的同學</h3>
+          <div id="seatTray" class="tray"></div>
+        </div>
+      </div>
+
+      <div class="block">
+        <h2>分組名單</h2>
+        <div id="groupList" class="group-list"></div>
+      </div>
+    </section>
+
+    <!-- 訂正狀況 -->
+    <section id="tab-submit" class="panel" role="tabpanel" hidden>
+      <div class="block">
+        <div class="submit-head">
+          <h2>作業訂正狀況</h2>
+          <p id="submitMeta" class="date"></p>
+        </div>
+        <div class="legend">
+          <span class="st st-ok">OK</span>
+          <span class="st st-fix">未訂正</span>
+          <span class="st st-miss">缺交</span>
+          <span class="st st-blank">未登記</span>
+        </div>
+        <div id="pendingList" class="pending"></div>
+        <div class="table-wrap">
+          <table id="submitTable" class="submit-table"></table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 登入視窗 -->
+  <dialog id="loginDialog">
+    <form id="loginForm" method="dialog">
+      <h2>老師登入</h2>
+      <label for="pwInput">管理密碼</label>
+      <input id="pwInput" type="password" autocomplete="current-password" required>
+      <p id="loginError" class="error" hidden></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn ghost" id="loginCancel">取消</button>
+        <button type="submit" class="btn primary" id="loginSubmit">登入</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
