@@ -484,3 +484,18 @@ body.syncing::before {
 @media (prefers-reduced-motion: reduce) {
   body.syncing::before { background: var(--action); opacity: .5; animation: none !important; }
 }
+
+/* ============================================================
+   作業與座位：左右並排（寬螢幕），窄螢幕自動上下排
+   ============================================================ */
+main { max-width: 1440px; }
+.home-split { display: grid; grid-template-columns: 1fr; gap: 20px; align-items: start; }
+@media (min-width: 1080px) {
+  .home-split { grid-template-columns: minmax(300px, 1fr) minmax(0, 2.6fr); }
+  /* 左欄窄：本次／上次作業改成上下排 */
+  .home-split .hw-cols { grid-template-columns: 1fr; gap: 14px; }
+  .home-split .hw-prev { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); padding-top: 12px; }
+  .home-split .homework { position: sticky; top: 16px; }
+  .home-split .seat-toolbar .hint { flex-basis: 100%; }
+  .home-split .seat-grid { grid-template-columns: repeat(var(--cols, 5), minmax(100px, 1fr)); min-width: calc(var(--cols, 5) * 108px); }
+}
