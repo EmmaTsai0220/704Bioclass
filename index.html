@@ -21,6 +21,45 @@
     </div>
   </header>
 
+  <!-- 上方工具列：計時器＋音樂 -->
+  <div class="toolbar">
+    <div class="timer" aria-label="計時器">
+      <div class="seg small" id="timerModes" role="group" aria-label="計時方式">
+        <button type="button" data-mode="down" aria-pressed="true">倒數</button>
+        <button type="button" data-mode="up" aria-pressed="false">碼表</button>
+      </div>
+      <button type="button" id="timerDisplay" class="timer-display" title="點一下放大顯示">5:00</button>
+      <div id="timerPresets" class="timer-presets" aria-label="倒數時間">
+        <button type="button" data-min="1">1 分</button>
+        <button type="button" data-min="3">3 分</button>
+        <button type="button" data-min="5">5 分</button>
+        <button type="button" data-min="10">10 分</button>
+        <input id="timerCustom" type="number" min="0.5" max="180" step="0.5" placeholder="自訂分" aria-label="自訂分鐘數">
+      </div>
+      <button type="button" id="timerStart" class="btn primary">開始</button>
+      <button type="button" id="timerReset" class="btn ghost">重設</button>
+      <div class="timer-progress"><div id="timerProgress"></div></div>
+    </div>
+
+    <div class="music">
+      <button type="button" id="musicBtn" class="btn music-btn" aria-pressed="false">
+        <span class="note" aria-hidden="true">♪</span><span class="label">播放音樂</span>
+      </button>
+      <button type="button" id="musicMore" class="btn ghost" aria-expanded="false" aria-controls="musicPanel">選曲</button>
+      <div id="musicPanel" class="music-panel" hidden>
+        <p id="musicNow" class="music-now">還沒選音樂</p>
+        <ul id="musicList" class="music-list"></ul>
+        <label class="check"><input id="musicLoop" type="checkbox" checked> 播完重複播放</label>
+        <form id="musicAddForm" class="music-add">
+          <input id="musicUrl" type="url" placeholder="貼上 YouTube 網址" required>
+          <input id="musicName" type="text" placeholder="名稱（可不填）">
+          <button type="submit" class="btn ghost">加入</button>
+        </form>
+        <p class="hint">加入的歌曲只會存在這台電腦的瀏覽器。想讓每台電腦都有，請寫進 config.js。</p>
+      </div>
+    </div>
+  </div>
+
   <nav class="tabs" role="tablist" aria-label="功能">
     <button role="tab" data-tab="home" aria-selected="true">作業與座位</button>
     <button role="tab" data-tab="points" aria-selected="false">加分</button>
@@ -245,8 +284,34 @@
     <button id="toastAction" type="button" hidden></button>
   </div>
 
+  <!-- 放大的計時器（投影用） -->
+  <div id="bigTimer" class="big-timer" hidden role="dialog" aria-label="計時器（放大）">
+    <div class="big-inner">
+      <div id="bigTime" class="big-time">5:00</div>
+      <div id="bigPresets" class="timer-presets big">
+        <button type="button" data-min="1">1 分</button>
+        <button type="button" data-min="3">3 分</button>
+        <button type="button" data-min="5">5 分</button>
+        <button type="button" data-min="10">10 分</button>
+      </div>
+      <div class="big-actions">
+        <button type="button" id="bigStart" class="btn primary">開始</button>
+        <button type="button" id="bigReset" class="btn ghost">重設</button>
+        <button type="button" id="bigClose" class="btn ghost">縮小</button>
+      </div>
+      <p class="big-hint">空白鍵：開始／暫停　Esc：縮小</p>
+    </div>
+  </div>
+
+  <!-- YouTube 播放器（播放時顯示在右下角） -->
+  <div id="ytDock" class="yt-dock" hidden>
+    <div class="yt-head"><span>音樂</span><button type="button" id="ytClose" class="linkish">關閉並停止</button></div>
+    <div id="ytPlayer"></div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
   <script src="config.js"></script>
   <script src="app.js"></script>
+  <script src="tools.js"></script>
 </body>
 </html>
