@@ -472,3 +472,15 @@ details.block > summary { cursor: pointer; list-style-position: inside; }
 @media (max-width: 480px) {
   .group-cards { grid-template-columns: 1fr; }
 }
+
+/* 背景更新中：頂部一條細細的進度條 */
+body.syncing::before {
+  content: ''; position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 50;
+  background: linear-gradient(90deg, transparent, var(--action), transparent);
+  background-size: 40% 100%; background-repeat: no-repeat;
+  animation: sync-bar 1.1s linear infinite;
+}
+@keyframes sync-bar { from { background-position: -40% 0; } to { background-position: 140% 0; } }
+@media (prefers-reduced-motion: reduce) {
+  body.syncing::before { background: var(--action); opacity: .5; animation: none !important; }
+}
