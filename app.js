@@ -61,22 +61,43 @@
     return j.data;
   }
 
+  // 上次讀到的資料先存在瀏覽器裡：打開網頁時先秒開舊資料，再背景更新成最新的
+  const CACHE_KEY = 'bio704_cache_v1';
+  function readCache() {
+    try { return JSON.parse(localStorage.getItem(CACHE_KEY) || 'null'); } catch (e) { return null; }
+  }
+  function writeCache(d) {
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify(d)); } catch (e) { /* 空間不足或無痕模式 */ }
+  }
+  function setSyncing(on) {
+    document.body.classList.toggle('syncing', on);
+    $('#refreshBtn').textContent = on ? '更新中…' : '重新整理';
+  }
+
   async function load(manual) {
     if (manual && state.seatDirty && !confirm('座位還沒儲存，重新整理會放棄這些變更。確定嗎？')) return;
     const btn = $('#refreshBtn');
     btn.disabled = true;
+    if (!state.data && !DEMO) {
+      const cached = readCache();
+      if (cached) { state.data = cached; renderAll(); }
+    }
+    setSyncing(true);
     try {
       await flushSubmissions();
-      state.data = await api('getAll');
-      state.seatDirty = false;
-      state.seatHistory = [];
+      const fresh = await api('getAll');
+      if (state.seatDirty && !manual) fresh.seats = state.data.seats;
+      state.data = fresh;
+      if (manual) { state.seatDirty = false; state.seatHistory = []; }
       renderAll();
+      if (!DEMO) writeCache(fresh);
       if (manual) toast('已讀取最新資料');
     } catch (e) {
       toast(e.message, true);
       if (!state.data) $('#termLabel').textContent = '讀取失敗：' + e.message;
     } finally {
       btn.disabled = false;
+      setSyncing(false);
     }
   }
 
