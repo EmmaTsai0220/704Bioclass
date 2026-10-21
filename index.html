@@ -28,16 +28,17 @@
         <button type="button" data-mode="down" aria-pressed="true">倒數</button>
         <button type="button" data-mode="up" aria-pressed="false">碼表</button>
       </div>
-      <button type="button" id="timerDisplay" class="timer-display" title="點一下放大顯示">5:00</button>
-      <div id="timerPresets" class="timer-presets" aria-label="倒數時間">
-        <button type="button" data-min="1">1 分</button>
-        <button type="button" data-min="3">3 分</button>
-        <button type="button" data-min="5">5 分</button>
-        <button type="button" data-min="10">10 分</button>
-        <input id="timerCustom" type="number" min="0.5" max="180" step="0.5" placeholder="自訂分" aria-label="自訂分鐘數">
+      <button type="button" id="timerDisplay" class="timer-display" title="點一下放大顯示">0:00</button>
+      <div id="timerPresets" class="timer-presets" aria-label="增加倒數時間">
+        <button type="button" data-add="60">+1 分</button>
+        <button type="button" data-add="300">+5 分</button>
+        <button type="button" data-add="10">+10 秒</button>
+        <button type="button" data-add="30">+30 秒</button>
+        <button type="button" data-clear class="clear">歸零</button>
       </div>
       <button type="button" id="timerStart" class="btn primary">開始</button>
-      <button type="button" id="timerReset" class="btn ghost">重設</button>
+      <button type="button" id="timerReset" class="btn ghost" title="回到設定的時間">重設</button>
+      <button type="button" id="timerBig" class="btn ghost big-btn" title="放大顯示（投影用）"><span aria-hidden="true">⛶</span> 放大</button>
       <div class="timer-progress"><div id="timerProgress"></div></div>
     </div>
 
@@ -289,12 +290,14 @@
   <!-- 放大的計時器（投影用） -->
   <div id="bigTimer" class="big-timer" hidden role="dialog" aria-label="計時器（放大）">
     <div class="big-inner">
-      <div id="bigTime" class="big-time">5:00</div>
-      <div id="bigPresets" class="timer-presets big">
-        <button type="button" data-min="1">1 分</button>
-        <button type="button" data-min="3">3 分</button>
-        <button type="button" data-min="5">5 分</button>
-        <button type="button" data-min="10">10 分</button>
+      <div id="bigModeLabel" class="big-mode">倒數</div>
+      <div id="bigTime" class="big-time">0:00</div>
+      <div id="bigPresets" class="timer-presets big" aria-label="增加倒數時間">
+        <button type="button" data-add="60">+1 分</button>
+        <button type="button" data-add="300">+5 分</button>
+        <button type="button" data-add="10">+10 秒</button>
+        <button type="button" data-add="30">+30 秒</button>
+        <button type="button" data-clear class="clear">歸零</button>
       </div>
       <div class="big-actions">
         <button type="button" id="bigStart" class="btn primary">開始</button>
