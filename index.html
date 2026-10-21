@@ -191,9 +191,11 @@
             <input id="drawCount" type="number" min="1" max="23" value="1">
           </label>
           <label class="check"><input id="drawNoRepeat" type="checkbox" checked> 抽過的先不重複</label>
+          <label class="check"><input id="drawFair" type="checkbox" checked> 公平模式（每 10 次每組至少一次、同組不連續）</label>
           <button id="drawBtn" class="btn primary big" type="button">抽籤</button>
         </div>
         <p class="pool-line"><span id="drawPool"></span> <button id="drawResetBtn" class="linkish" type="button">重置籤筒</button></p>
+        <p id="drawFairInfo" class="fair-info"></p>
         <div id="drawResult" class="draw-result">
           <p class="empty">選好方式後按「抽籤」。</p>
         </div>
