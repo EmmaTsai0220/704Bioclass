@@ -488,11 +488,17 @@
   }
 
   /* ================= 籤筒 ================= */
+  // 公平規則：每抽出一位／一組算一次，每 FAIR_BLOCK 次為一輪
+  //   1. 同一組不會連續被抽到
+  //   2. 一輪內每組至少被抽到一次（快到輪尾時，還沒抽到的組會優先）
+  const FAIR_BLOCK = 10;
+
+  function emptyFair() { return { count: 0, seen: [], last: '' }; }
   function loadDrawn() {
     try {
       const o = JSON.parse(sessionStorage.getItem(DRAWN_KEY) || '{}');
-      return { people: o.people || [], group: o.group || [] };
-    } catch (e) { return { people: [], group: [] }; }
+      return { people: o.people || [], group: o.group || [], fair: o.fair || emptyFair() };
+    } catch (e) { return { people: [], group: [], fair: emptyFair() }; }
   }
   function saveDrawn() {
     try { sessionStorage.setItem(DRAWN_KEY, JSON.stringify(state.drawn)); } catch (e) { /* ignore */ }
@@ -503,6 +509,7 @@
     renderDrawPool();
   }
   function drawablePeople() { return state.data.students.filter((s) => s.group); }
+  function fairOn() { return $('#drawFair').checked; }
 
   function renderDrawPool() {
     if (!state.data) return;
@@ -521,25 +528,73 @@
       text = (mode === 'role' ? $('#drawRole').value + '：' : '') + '還有 ' + left + ' / ' + list.length + ' 人沒抽過';
     }
     $('#drawPool').textContent = text;
+
+    const f = state.drawn.fair;
+    const missing = state.data.groups.map((g) => g.name).filter((g) => f.seen.indexOf(g) < 0);
+    $('#drawFairInfo').innerHTML = !fairOn() ? '' :
+      '這一輪已抽 <b>' + f.count + ' / ' + FAIR_BLOCK + '</b> 次' +
+      (f.count && missing.length ? '，還沒抽到：' + missing.map((g) =>
+        '<span class="fair-chip" style="--g:' + groupColor(g) + '">' + esc(g) + '</span>').join('') : '') +
+      (f.last ? '<span class="fair-last">（下一次不會是' + esc(f.last) + '）</span>' : '');
   }
 
   function resetDrawn() {
-    state.drawn = { people: [], group: [] };
+    state.drawn = { people: [], group: [], fair: emptyFair() };
     saveDrawn();
     renderDrawPool();
     toast('籤筒已重置');
   }
 
-  // 從 list 中抽 n 個；不重複模式下優先抽沒抽過的，不夠時自動開新一輪
-  function pick(list, n, drawnList, keyFn) {
+  /**
+   * 依序抽出 n 個，每抽一個都套用公平規則與「不重複」：
+   *   list：可抽的對象；keyFn：用來記錄抽過沒；groupOf：對象屬於哪一組
+   */
+  function pick(list, n, drawnList, keyFn, groupOf) {
     const noRepeat = $('#drawNoRepeat').checked;
-    let pool = noRepeat ? list.filter((x) => drawnList.indexOf(keyFn(x)) < 0) : list.slice();
-    let picked = shuffle(pool).slice(0, n);
+    const fair = fairOn();
+    const f = state.drawn.fair;
+    const allGroups = state.data.groups.map((g) => g.name);
+    const picked = [];
+
+    for (let k = 0; k < n; k++) {
+      const avail = list.filter((x) => picked.indexOf(x) < 0);
+      if (!avail.length) break;
+      let cands = avail;
+      if (fair) {
+        // 規則 1：不跟上一次同一組
+        const notSame = cands.filter((x) => groupOf(x) !== f.last);
+        if (notSame.length) cands = notSame;
+        // 規則 2：剩下的次數 ≤ 還沒抽到的組數時，只能從還沒抽到的組裡抽
+        const remaining = FAIR_BLOCK - f.count;
+        const missing = allGroups.filter((g) => f.seen.indexOf(g) < 0 && avail.some((x) => groupOf(x) === g));
+        if (missing.length && missing.length >= remaining) {
+          const forced = cands.filter((x) => missing.indexOf(groupOf(x)) >= 0);
+          if (forced.length) cands = forced;
+        }
+      }
+      // 不重複：優先抽還沒抽過的（公平規則優先，必要時才會重複）
+      if (noRepeat) {
+        const fresh = cands.filter((x) => drawnList.indexOf(keyFn(x)) < 0);
+        if (fresh.length) cands = fresh;
+      }
+      const x = cands[Math.floor(Math.random() * cands.length)];
+      picked.push(x);
+
+      const g = groupOf(x);
+      f.last = g;
+      if (f.seen.indexOf(g) < 0) f.seen.push(g);
+      if (++f.count >= FAIR_BLOCK) { f.count = 0; f.seen = []; }
+    }
+
+    // 不重複模式：整份名單都抽過了 → 開新一輪
     let newRound = false;
-    if (picked.length < n) {
-      newRound = noRepeat;
-      const rest = shuffle(list.filter((x) => picked.indexOf(x) < 0)).slice(0, n - picked.length);
-      picked = picked.concat(rest);
+    if (noRepeat) {
+      picked.forEach((x) => { if (drawnList.indexOf(keyFn(x)) < 0) drawnList.push(keyFn(x)); });
+      if (list.every((x) => drawnList.indexOf(keyFn(x)) >= 0)) {
+        newRound = true;
+        const keys = list.map(keyFn);
+        for (let i = drawnList.length - 1; i >= 0; i--) if (keys.indexOf(drawnList[i]) >= 0) drawnList.splice(i, 1);
+      }
     }
     return { picked: picked, newRound: newRound };
   }
@@ -547,33 +602,23 @@
   function doDraw() {
     if (!state.data) return;
     const mode = $('input[name="drawMode"]:checked').value;
-    const noRepeat = $('#drawNoRepeat').checked;
     let result;
 
     if (mode === 'people') {
       const n = Math.max(1, Math.min(drawablePeople().length, parseInt($('#drawCount').value, 10) || 1));
-      const r = pick(drawablePeople(), n, state.drawn.people, (s) => s.name);
-      if (r.newRound) state.drawn.people = [];
-      if (noRepeat) r.picked.forEach((s) => state.drawn.people.push(s.name));
-      if (r.newRound) toast('全班都抽過一輪了，重新開始新一輪');
+      const r = pick(drawablePeople(), n, state.drawn.people, (s) => s.name, (s) => s.group);
+      if (r.newRound) toast('全班都抽過一輪了，接下來重新開始');
       result = { mode: 'people', items: r.picked.map((s) => ({ student: s.name, group: s.group, role: s.role, got: 0 })) };
     } else if (mode === 'group') {
-      const r = pick(state.data.groups, 1, state.drawn.group, (g) => g.name);
-      if (r.newRound) state.drawn.group = [];
-      if (noRepeat) r.picked.forEach((g) => state.drawn.group.push(g.name));
-      if (r.newRound) toast('每組都抽過了，重新開始新一輪');
+      const r = pick(state.data.groups, 1, state.drawn.group, (g) => g.name, (g) => g.name);
+      if (r.newRound) toast('每組都抽過了，接下來重新開始');
       result = { mode: 'group', items: r.picked.map((g) => ({ group: g.name, role: '全組', got: 0 })) };
     } else {
-      // 抽角色：從全班這個角色的同學中抽指定人數
       const role = $('#drawRole').value;
       const cands = drawablePeople().filter((x) => x.role === role);
       const n = Math.max(1, Math.min(cands.length, parseInt($('#drawCount').value, 10) || 1));
-      const r = pick(cands, n, state.drawn.people, (x) => x.name);
-      if (r.newRound) {
-        state.drawn.people = state.drawn.people.filter((nm) => !cands.some((c) => c.name === nm));
-        toast('這個角色都抽過一輪了，重新開始');
-      }
-      if (noRepeat) r.picked.forEach((x) => { if (state.drawn.people.indexOf(x.name) < 0) state.drawn.people.push(x.name); });
+      const r = pick(cands, n, state.drawn.people, (x) => x.name, (x) => x.group);
+      if (r.newRound) toast('這個角色都抽過一輪了，接下來重新開始');
       result = { mode: 'role', role: role, items: r.picked.map((x) => ({ student: x.name, group: x.group, role: x.role, got: 0 })) };
     }
     saveDrawn();
@@ -1081,6 +1126,7 @@
     $$('input[name="drawMode"]').forEach((r) => r.addEventListener('change', syncDrawFields));
     $('#drawNoRepeat').addEventListener('change', renderDrawPool);
     $('#drawRole').addEventListener('change', renderDrawPool);
+    $('#drawFair').addEventListener('change', renderDrawPool);
     $('#drawBtn').addEventListener('click', doDraw);
     $('#drawResetBtn').addEventListener('click', resetDrawn);
     $('#drawResult').addEventListener('click', (e) => {
