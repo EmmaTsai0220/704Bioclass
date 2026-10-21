@@ -13,8 +13,8 @@
   /* ================= 計時器 ================= */
   const T = {
     mode: 'down',        // 'down' 倒數 | 'up' 碼表
-    setMs: 5 * 60000,    // 倒數設定的時間
-    baseMs: 5 * 60000,   // 暫停時累積的剩餘／經過時間
+    setMs: 0,            // 倒數設定的時間（用 +1 分、+10 秒…累加）
+    baseMs: 0,           // 暫停時累積的剩餘／經過時間
     startAt: 0,          // 開始時間（0 = 沒在跑）
     raf: 0,
     done: false,
@@ -40,7 +40,8 @@
     $('#timerDisplay').textContent = text;
     $('#bigTime').textContent = text;
     const running = !!T.startAt;
-    $('#timerStart').textContent = running ? '暫停' : (T.mode === 'up' && T.baseMs > 0) || (T.mode === 'down' && T.baseMs < T.setMs && !T.done) ? '繼續' : '開始';
+    $('#timerStart').textContent = running ? '暫停' : (T.mode === 'up' && T.baseMs > 0) || (T.mode === 'down' && T.baseMs < T.setMs && T.baseMs > 0 && !T.done) ? '繼續' : '開始';
+    $('#bigModeLabel').textContent = T.mode === 'down' ? '倒數' : '碼表';
     $('#bigStart').textContent = $('#timerStart').textContent;
     const warn = T.mode === 'down' && running && ms <= 10000;
     document.body.classList.toggle('timer-warn', warn);
@@ -60,6 +61,7 @@
   function start() {
     if (T.startAt) { pause(); return; }
     if (T.mode === 'down' && T.baseMs <= 0) T.baseMs = T.setMs;
+    if (T.mode === 'down' && T.baseMs <= 0) { toast('先按 +1 分、+30 秒… 設定倒數時間'); return; }
     T.done = false;
     unlockAudio();
     T.startAt = Date.now();
@@ -87,10 +89,29 @@
     $('#bigPresets').hidden = mode !== 'down';
     reset();
   }
-  function setMinutes(min) {
-    T.setMs = Math.max(1, Math.round(min * 60)) * 1000;
+  const MAX_MS = 3 * 3600 * 1000;
+  // 累加倒數時間；正在跑或暫停中也可以直接加時間
+  function addTime(sec) {
     if (T.mode !== 'down') setMode('down');
-    else reset();
+    const add = sec * 1000;
+    stopAlarm();
+    if (T.done) { T.done = false; T.setMs = 0; T.baseMs = 0; }
+    if (T.startAt) {
+      const left = nowMs();
+      T.baseMs = Math.min(MAX_MS, left + add);
+      T.startAt = Date.now();
+      T.setMs = Math.max(T.setMs, T.baseMs);
+    } else {
+      const fresh = T.baseMs === T.setMs;
+      T.baseMs = Math.min(MAX_MS, T.baseMs + add);
+      T.setMs = fresh ? T.baseMs : Math.max(T.setMs, T.baseMs);
+    }
+    render();
+  }
+  function clearTime() {
+    T.setMs = 0;
+    if (T.mode !== 'down') setMode('down');
+    reset();
   }
   function finish() {
     T.startAt = 0;
@@ -352,23 +373,19 @@
     $('#timerStart').addEventListener('click', start);
     $('#timerReset').addEventListener('click', reset);
     $('#timerDisplay').addEventListener('click', openBig);
-    $('#timerPresets').addEventListener('click', (e) => {
-      const b = e.target.closest('button[data-min]');
-      if (b) setMinutes(Number(b.dataset.min));
-    });
-    $('#timerCustom').addEventListener('change', (e) => {
-      const v = parseFloat(e.target.value);
-      if (v > 0 && v <= 180) setMinutes(v);
-      e.target.value = '';
-    });
+    const onPreset = (e) => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      if (b.hasAttribute('data-clear')) clearTime();
+      else if (b.dataset.add) addTime(Number(b.dataset.add));
+    };
+    $('#timerPresets').addEventListener('click', onPreset);
+    $('#timerBig').addEventListener('click', openBig);
 
     $('#bigStart').addEventListener('click', start);
     $('#bigReset').addEventListener('click', reset);
     $('#bigClose').addEventListener('click', closeBig);
-    $('#bigPresets').addEventListener('click', (e) => {
-      const b = e.target.closest('button[data-min]');
-      if (b) setMinutes(Number(b.dataset.min));
-    });
+    $('#bigPresets').addEventListener('click', onPreset);
     $('#bigTimer').addEventListener('click', (e) => { if (e.target.id === 'bigTimer') closeBig(); });
 
     document.addEventListener('keydown', (e) => {
