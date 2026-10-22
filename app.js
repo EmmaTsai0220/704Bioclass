@@ -201,7 +201,7 @@
         ? '「' + esc(label) + '」<b>' + (last.missing.length ? last.missing.join('、') + ' 號未完成' : '全數完成') +
           ' ' + signed(last.delta) + '</b> <button type="button" class="linkish undo-check" data-id="' + esc(last.id) + '">撤銷</button>'
         : '';
-      return '<div class="gcard' + (lead ? ' lead' : '') + '" style="--g:' + groupColor(g.name) + '">' +
+      return '<div class="gcard' + '' + '" style="--g:' + groupColor(g.name) + '">' +
         '<div class="gcard-head"><h3>' + esc(g.name) + '<small>' + count + ' 人</small></h3>' +
         '<span class="gtotal">' + fmt(total) + '</span></div>' +
         '<div class="score-track"><div class="score-bar" style="width:' + Math.max(0, total / max * 100) + '%"></div></div>' +
