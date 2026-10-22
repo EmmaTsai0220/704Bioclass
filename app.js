@@ -529,13 +529,6 @@
     }
     $('#drawPool').textContent = text;
 
-    const f = state.drawn.fair;
-    const missing = state.data.groups.map((g) => g.name).filter((g) => f.seen.indexOf(g) < 0);
-    $('#drawFairInfo').innerHTML = !fairOn() ? '' :
-      '這一輪已抽 <b>' + f.count + ' / ' + FAIR_BLOCK + '</b> 次' +
-      (f.count && missing.length ? '，還沒抽到：' + missing.map((g) =>
-        '<span class="fair-chip" style="--g:' + groupColor(g) + '">' + esc(g) + '</span>').join('') : '') +
-      (f.last ? '<span class="fair-last">（下一次不會是' + esc(f.last) + '）</span>' : '');
   }
 
   function resetDrawn() {
@@ -1126,7 +1119,6 @@
     $$('input[name="drawMode"]').forEach((r) => r.addEventListener('change', syncDrawFields));
     $('#drawNoRepeat').addEventListener('change', renderDrawPool);
     $('#drawRole').addEventListener('change', renderDrawPool);
-    $('#drawFair').addEventListener('change', renderDrawPool);
     $('#drawBtn').addEventListener('click', doDraw);
     $('#drawResetBtn').addEventListener('click', resetDrawn);
     $('#drawResult').addEventListener('click', (e) => {
