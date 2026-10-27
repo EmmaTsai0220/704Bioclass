@@ -621,3 +621,7 @@ body.big-open { overflow: hidden; }
 .timer .big-btn span { font-size: 1.05rem; line-height: 1; }
 .big-mode { color: var(--muted); font-size: 1.3rem; font-weight: 500; letter-spacing: .3em; margin-bottom: -12px; }
 body:not(.admin) .points-head .check-label { display: none; }
+
+/* 訂正狀況：表格在上、未完成清單在下 */
+.pending-title { margin: 22px 0 10px; padding-top: 16px; border-top: 1px solid var(--line); }
+.pending { margin-bottom: 0; }
