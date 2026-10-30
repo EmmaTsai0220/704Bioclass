@@ -884,6 +884,64 @@
       }).join('') + '</tr>'
     ).join('') + '</tbody>';
     $('#submitTable').innerHTML = head + body;
+    if (!$('#lookupPanel').hidden && $('#lookupInput').value.trim()) runLookup();
+  }
+
+  /* 查詢自己的作業：座號、全名、姓或名都可以 */
+  function findStudents(q) {
+    q = q.replace(/\s+/g, '').replace(/號$/, '');
+    if (!q) return [];
+    const recs = state.data.submissions.records;
+    if (/^\d+$/.test(q)) return recs.filter((r) => r.no === Number(q));
+    const exact = recs.filter((r) => r.name === q);
+    if (exact.length) return exact;
+    const given = recs.filter((r) => r.name.slice(1) === q);      // 名
+    const family = recs.filter((r) => r.name.charAt(0) === q);    // 姓
+    const part = recs.filter((r) => r.name.indexOf(q) >= 0);      // 部分符合
+    const seen = new Set();
+    return given.concat(family, part).filter((r) => !seen.has(r.no) && seen.add(r.no));
+  }
+
+  function runLookup() {
+    const box = $('#lookupResult');
+    const sub = state.data && state.data.submissions;
+    if (!sub || sub.error) { box.innerHTML = '<p class="error">目前讀不到作業表，請稍後再試</p>'; return; }
+    const q = $('#lookupInput').value.trim();
+    if (!q) { box.innerHTML = ''; return; }
+    const found = findStudents(q);
+    if (!found.length) {
+      box.innerHTML = '<p class="empty">找不到「' + esc(q) + '」，請確認座號或姓名有沒有打錯。</p>';
+      return;
+    }
+    box.innerHTML = (found.length > 1 ? '<p class="date">找到 ' + found.length + ' 位同學</p>' : '') +
+      found.map((r) => {
+        const s = student(r.name);
+        const bad = sub.homeworks.filter((hw) => r.status[hw] === '未訂正' || r.status[hw] === '缺交');
+        const color = s && s.group ? groupColor(s.group) : 'var(--st-blank)';
+        const list = bad.length
+          ? '<ul class="lookup-list">' + bad.map((hw) => {
+              const st = r.status[hw];
+              return '<li><span class="hw">' + esc(hw) + '</span><span class="st ' + (st === '缺交' ? 'st-miss' : 'st-fix') + '">' + esc(st) + '</span></li>';
+            }).join('') + '</ul>'
+          : '<p class="all-ok">目前登記的作業都 OK</p>';
+        return '<div class="lookup-card" style="--g:' + color + '">' +
+          '<h3><span class="no">' + r.no + '</span>' + esc(r.name) +
+          (s && s.group ? '<small>' + esc(s.group) + '</small>' : '') +
+          (bad.length ? '<span class="count">' + bad.length + ' 項要處理</span>' : '') + '</h3>' + list + '</div>';
+      }).join('');
+  }
+
+  function toggleLookup() {
+    const p = $('#lookupPanel');
+    p.hidden = !p.hidden;
+    $('#lookupBtn').setAttribute('aria-expanded', String(!p.hidden));
+    if (!p.hidden) { $('#lookupInput').focus(); runLookup(); }
+  }
+
+  function goSummary() {
+    const t = $('#pendingTitle');
+    t.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+    t.focus({ preventScroll: true });
   }
 
   function renderSubmitMeta(text) {
@@ -1144,6 +1202,10 @@
       if (b && state.admin) cycleSubmission(b);
     });
     $('#addHwForm').addEventListener('submit', addHomeworkColumn);
+    $('#lookupBtn').addEventListener('click', toggleLookup);
+    $('#summaryBtn').addEventListener('click', goSummary);
+    $('#lookupForm').addEventListener('submit', (e) => { e.preventDefault(); runLookup(); });
+    $('#lookupInput').addEventListener('input', runLookup);
     $('#hwTabSelect').addEventListener('change', changeHwTab);
 
     // 在「訂正狀況」頁時每分鐘自動同步一次試算表
