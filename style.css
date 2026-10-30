@@ -625,3 +625,26 @@ body:not(.admin) .points-head .check-label { display: none; }
 /* 訂正狀況：表格在上、未完成清單在下 */
 .pending-title { margin: 22px 0 10px; padding-top: 16px; border-top: 1px solid var(--line); }
 .pending { margin-bottom: 0; }
+
+/* 訂正狀況：查詢自己的作業 */
+.submit-actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 4px 0 14px; }
+.submit-actions .btn { padding: 10px 20px; font-size: 1rem; }
+.lookup { margin: 0 0 18px; padding: 16px 18px; border: 1px solid var(--line); border-radius: var(--radius-m); background: #F6F9F8; }
+.lookup-form label { display: block; font-size: .9rem; color: var(--muted); margin-bottom: 6px; }
+.lookup-form input { flex: 1; min-width: 0; max-width: 360px; padding: 9px 12px; border: 1px solid var(--line); border-radius: var(--radius-s); background: var(--surface); font-size: 1.05rem; }
+.lookup-result { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-top: 14px; }
+.lookup-result:empty { display: none; }
+.lookup-result > p { grid-column: 1 / -1; margin: 0; }
+.lookup-card {
+  background: var(--surface); border: 1px solid color-mix(in srgb, var(--g) 30%, white);
+  box-shadow: inset 5px 0 0 var(--g); border-radius: var(--radius-s); padding: 12px 14px 12px 18px;
+}
+.lookup-card h3 { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; font-size: 1.15rem; margin-bottom: 8px; }
+.lookup-card h3 .no { color: var(--muted); font-weight: 400; font-size: .9rem; }
+.lookup-card h3 small { color: var(--g); font-weight: 700; font-size: .85rem; }
+.lookup-card h3 .count { margin-left: auto; color: var(--st-miss); font-size: .85rem; font-weight: 700; }
+.lookup-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.lookup-list li { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.lookup-list .hw { font-weight: 500; }
+.lookup-card .all-ok { margin: 0; color: var(--st-ok); font-weight: 500; }
+.pending-title:focus { outline: none; }
