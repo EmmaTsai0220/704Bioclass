@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261027">
+  <link rel="stylesheet" href="style.css?v=20261030">
 </head>
 <body>
   <header class="topbar">
@@ -209,6 +209,20 @@
           <h2>作業訂正狀況</h2>
           <p id="submitMeta" class="date"></p>
         </div>
+        <div class="submit-actions">
+          <button type="button" id="lookupBtn" class="btn primary" aria-expanded="false" aria-controls="lookupPanel">查詢我的作業</button>
+          <button type="button" id="summaryBtn" class="btn ghost">看未完成總表</button>
+        </div>
+        <div id="lookupPanel" class="lookup" hidden>
+          <form id="lookupForm" class="lookup-form">
+            <label for="lookupInput">輸入座號或姓名</label>
+            <div class="inline">
+              <input id="lookupInput" type="search" placeholder="例如：9、張芝婕、張、芝婕" autocomplete="off">
+              <button type="submit" class="btn primary">查詢</button>
+            </div>
+          </form>
+          <div id="lookupResult" class="lookup-result" aria-live="polite"></div>
+        </div>
         <div class="submit-tools admin-only">
           <label class="field">分頁
             <select id="hwTabSelect"></select>
@@ -228,7 +242,7 @@
         <div class="table-wrap">
           <table id="submitTable" class="submit-table"></table>
         </div>
-        <h3 class="pending-title">還沒完成的同學</h3>
+        <h3 id="pendingTitle" class="pending-title" tabindex="-1">還沒完成的同學</h3>
         <div id="pendingList" class="pending"></div>
       </div>
     </section>
@@ -315,8 +329,8 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
-  <script src="config.js?v=20261027"></script>
-  <script src="app.js?v=20261027"></script>
-  <script src="tools.js?v=20261027"></script>
+  <script src="config.js?v=20261030"></script>
+  <script src="app.js?v=20261030"></script>
+  <script src="tools.js?v=20261030"></script>
 </body>
 </html>
