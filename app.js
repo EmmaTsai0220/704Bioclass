@@ -548,6 +548,7 @@
     const f = state.drawn.fair;
     const allGroups = state.data.groups.map((g) => g.name);
     const picked = [];
+    const byGroup = list.every((x) => keyFn(x) === groupOf(x));   // 抽組別模式
 
     for (let k = 0; k < n; k++) {
       const avail = list.filter((x) => picked.indexOf(x) < 0);
@@ -565,13 +566,32 @@
           if (forced.length) cands = forced;
         }
       }
-      // 不重複：優先抽還沒抽過的（公平規則優先，必要時才會重複）
-      if (noRepeat) {
-        const fresh = cands.filter((x) => drawnList.indexOf(keyFn(x)) < 0);
-        if (fresh.length) cands = fresh;
+      // 先公平地抽「組」（每組機會一樣，不受人數多寡影響），再從那一組裡抽人
+      // 不重複：優先選還有沒被抽過的人的組，組裡也優先抽還沒抽過的人
+      // （「不重複」是以組為單位計算：某組的人都抽過了，那一組就自己重新開始，不會因為人數少而被冷落）
+      const groupsHere = [];
+      cands.forEach((x) => { if (groupsHere.indexOf(groupOf(x)) < 0) groupsHere.push(groupOf(x)); });
+      // 抽組別：「不重複」= 五組都抽過才會再抽到同一組
+      let gChoices = groupsHere;
+      if (noRepeat && byGroup) {
+        const freshG = groupsHere.filter((g) => drawnList.indexOf(g) < 0);
+        if (freshG.length) gChoices = freshG;
       }
-      const x = cands[Math.floor(Math.random() * cands.length)];
+      const gPick = gChoices[Math.floor(Math.random() * gChoices.length)];
+      let inGroup = cands.filter((x) => groupOf(x) === gPick);
+      if (noRepeat && !byGroup) {
+        let fresh = inGroup.filter((x) => drawnList.indexOf(keyFn(x)) < 0);
+        if (!fresh.length) {
+          // 這一組（在這個名單裡）的人都抽過了 → 這一組重新開始
+          const members = list.filter((x) => groupOf(x) === gPick).map(keyFn);
+          for (let i = drawnList.length - 1; i >= 0; i--) if (members.indexOf(drawnList[i]) >= 0) drawnList.splice(i, 1);
+          fresh = inGroup.filter((x) => drawnList.indexOf(keyFn(x)) < 0);
+        }
+        if (fresh.length) inGroup = fresh;
+      }
+      const x = inGroup[Math.floor(Math.random() * inGroup.length)];
       picked.push(x);
+      if (noRepeat && drawnList.indexOf(keyFn(x)) < 0) drawnList.push(keyFn(x));
 
       const g = groupOf(x);
       f.last = g;
@@ -582,7 +602,6 @@
     // 不重複模式：整份名單都抽過了 → 開新一輪
     let newRound = false;
     if (noRepeat) {
-      picked.forEach((x) => { if (drawnList.indexOf(keyFn(x)) < 0) drawnList.push(keyFn(x)); });
       if (list.every((x) => drawnList.indexOf(keyFn(x)) >= 0)) {
         newRound = true;
         const keys = list.map(keyFn);
