@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261030b">
+  <link rel="stylesheet" href="style.css?v=20261117b">
 </head>
 <body>
   <header class="topbar">
@@ -144,6 +144,7 @@
         <div class="block">
           <h2>最近加分紀錄</h2>
           <ul id="scoreLog" class="log-list"></ul>
+          <button type="button" id="scoreLogMore" class="linkish log-more" hidden></button>
         </div>
       </div>
 
@@ -193,9 +194,10 @@
           </label>
           <label class="check"><input id="drawNoRepeat" type="checkbox" checked> 抽過的先不重複</label>
           <label class="check" title="每 10 次每組至少抽到一次，同一組不會連續被抽到"><input id="drawFair" type="checkbox" checked> 公平模式</label>
+          <label class="check admin-only boost" title="總分最低的兩組被抽到的機會提高"><input id="drawBoost" type="checkbox" checked> 低分組加權</label>
           <button id="drawBtn" class="btn primary big" type="button">抽籤</button>
         </div>
-        <p class="pool-line"><span id="drawPool"></span> <button id="drawResetBtn" class="linkish" type="button">重置籤筒</button></p>
+        <p class="pool-line"><span id="drawPool"></span> <span id="drawBoostHint" class="admin-only boost-hint"></span> <button id="drawResetBtn" class="linkish" type="button">重置籤筒</button></p>
         <div id="drawResult" class="draw-result">
           <p class="empty">選好方式後按「抽籤」。</p>
         </div>
@@ -329,8 +331,8 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
-  <script src="config.js?v=20261030b"></script>
-  <script src="app.js?v=20261030b"></script>
-  <script src="tools.js?v=20261030b"></script>
+  <script src="config.js?v=20261117b"></script>
+  <script src="app.js?v=20261117b"></script>
+  <script src="tools.js?v=20261117b"></script>
 </body>
 </html>
