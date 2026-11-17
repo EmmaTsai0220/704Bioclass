@@ -215,7 +215,8 @@
 
     // 最近加分紀錄
     const hwIds = new Set(recs.map((x) => x.id));
-    const log = (sc.log || []).slice(0, 20);
+    const allLog = sc.log || [];
+    const log = state.showAllLog ? allLog : allLog.slice(0, 20);
     $('#scoreLog').innerHTML = log.length ? log.map((x) =>
       '<li class="' + (x.undone ? 'undone' : '') + '"><span>' + esc(x.time) + '</span>' +
       '<span><b>' + esc(x.group) + '</b> ' + esc(x.student || '') +
@@ -225,9 +226,13 @@
         (hwIds.has(x.id) ? ' data-hw="1"' : '') + '>撤銷</button>' : '') +
       '</li>'
     ).join('') : '<li>這個段考還沒有加分紀錄</li>';
+    const more = $('#scoreLogMore');
+    more.hidden = allLog.length <= 20;
+    more.textContent = state.showAllLog ? '只顯示最近 20 筆' : '顯示全部 ' + allLog.length + ' 筆';
 
     renderMissStats();
     renderCheckMatrix();
+    renderBoostHint();
 
     // 計分設定
     $('#totalsForm').innerHTML = state.data.groups.map((g) =>
@@ -511,6 +516,28 @@
   function drawablePeople() { return state.data.students.filter((s) => s.group); }
   function fairOn() { return $('#drawFair').checked; }
 
+  // 低分組加權（只有老師看得到這個選項；設定記在這台電腦）
+  const LOW_BOOST = Number(CFG.LOW_BOOST) > 1 ? Number(CFG.LOW_BOOST) : 1.5;
+  const BOOST_KEY = 'bio704_lowboost';
+  function boostOn() { const el = $('#drawBoost'); return !!(el && el.checked); }
+  function lowestGroups() {
+    const t = (state.data && state.data.scores && state.data.scores.totals) || {};
+    const scored = state.data.groups.map((g) => ({ g: g.name, v: Number(t[g.name]) || 0 }));
+    const vals = scored.map((x) => x.v).sort((p, q) => p - q);
+    if (vals[0] === vals[vals.length - 1]) return [];          // 大家同分就不加權
+    const cut = vals[Math.min(1, vals.length - 1)];            // 第二低的分數
+    const low = scored.filter((x) => x.v <= cut).map((x) => x.g);
+    return low.length >= scored.length ? [] : low;
+  }
+  function renderBoostHint() {
+    const el = $('#drawBoostHint');
+    if (!el || !state.data) return;
+    const low = boostOn() ? lowestGroups() : [];
+    el.textContent = !boostOn() ? '' : low.length
+      ? '目前加權：' + low.join('、') + '（機會 ×' + LOW_BOOST + '）'
+      : '目前各組同分，暫不加權';
+  }
+
   function renderDrawPool() {
     if (!state.data) return;
     const mode = $('input[name="drawMode"]:checked').value;
@@ -528,6 +555,7 @@
       text = (mode === 'role' ? $('#drawRole').value + '：' : '') + '還有 ' + left + ' / ' + list.length + ' 人沒抽過';
     }
     $('#drawPool').textContent = text;
+    renderBoostHint();
 
   }
 
@@ -577,7 +605,12 @@
         const freshG = groupsHere.filter((g) => drawnList.indexOf(g) < 0);
         if (freshG.length) gChoices = freshG;
       }
-      const gPick = gChoices[Math.floor(Math.random() * gChoices.length)];
+      // 低分組加權：目前總分最低的兩組（同分都算）被抽到的機會乘上 LOW_BOOST
+      const lowSet = boostOn() ? lowestGroups() : [];
+      const weights = gChoices.map((g) => (lowSet.indexOf(g) >= 0 ? LOW_BOOST : 1));
+      let roll = Math.random() * weights.reduce((s, w) => s + w, 0);
+      let gPick = gChoices[gChoices.length - 1];
+      for (let i = 0; i < gChoices.length; i++) { roll -= weights[i]; if (roll < 0) { gPick = gChoices[i]; break; } }
       let inGroup = cands.filter((x) => groupOf(x) === gPick);
       if (noRepeat && !byGroup) {
         let fresh = inGroup.filter((x) => drawnList.indexOf(keyFn(x)) < 0);
@@ -1148,6 +1181,7 @@
       else if (b.classList.contains('act-pts')) openPointDialog({ group: g });
       else if (b.classList.contains('undo-check') && confirm('確定撤銷這筆作業紀錄嗎？分數也會一起扣回來。')) undoCheck(b.dataset.id);
     });
+    $('#scoreLogMore').addEventListener('click', () => { state.showAllLog = !state.showAllLog; renderScores(); });
     $('#scoreLog').addEventListener('click', (e) => {
       const b = e.target.closest('.undo');
       if (!b || !confirm('確定撤銷這筆加分嗎？')) return;
@@ -1196,6 +1230,11 @@
     $$('input[name="drawMode"]').forEach((r) => r.addEventListener('change', syncDrawFields));
     $('#drawNoRepeat').addEventListener('change', renderDrawPool);
     $('#drawRole').addEventListener('change', renderDrawPool);
+    try { $('#drawBoost').checked = localStorage.getItem(BOOST_KEY) !== '0'; } catch (e) { /* ignore */ }
+    $('#drawBoost').addEventListener('change', (e) => {
+      try { localStorage.setItem(BOOST_KEY, e.target.checked ? '1' : '0'); } catch (err) { /* ignore */ }
+      renderBoostHint();
+    });
     $('#drawBtn').addEventListener('click', doDraw);
     $('#drawResetBtn').addEventListener('click', resetDrawn);
     $('#drawResult').addEventListener('click', (e) => {
