@@ -648,3 +648,8 @@ body:not(.admin) .points-head .check-label { display: none; }
 .lookup-list .hw { font-weight: 500; }
 .lookup-card .all-ok { margin: 0; color: var(--st-ok); font-weight: 500; }
 .pending-title:focus { outline: none; }
+.log-more { margin-top: 10px; }
+
+/* 低分組加權（老師模式才顯示） */
+body.admin .check.boost.admin-only { display: inline-flex; }
+body.admin .boost-hint.admin-only { display: inline; color: var(--action); margin: 0 8px; }
